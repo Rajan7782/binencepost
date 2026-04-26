@@ -7,7 +7,7 @@ from datetime import datetime
 # ========= CONFIG =========
 CMC_API_KEY = "11c4b5a3b56a483194175596bd6e3b88"
 BINANCE_API_KEY = "e95e92490c96444ba9da380d4ed7dddd"
-TELEGRAM_TOKEN = "8706175180:AAFxM7YekqSESz40M8g0cQtEsr_fhultNys"
+TELEGRAM_TOKEN = "8647112503:AAGeJfMglhqnEe-kp9BWBLqS211GcsygzBw"
 CHAT_ID = "6724973499"
 
 # ==========================
