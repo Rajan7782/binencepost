@@ -2,15 +2,16 @@ import requests
 import time
 import threading
 import random
+import os
 from datetime import datetime
 
-# ========= CONFIG =========
-CMC_API_KEY = "11c4b5a3b56a483194175596bd6e3b88"
-BINANCE_API_KEY = "e95e92490c96444ba9da380d4ed7dddd"
-TELEGRAM_TOKEN = "8647112503:AAGeJfMglhqnEe-kp9BWBLqS211GcsygzBw"
-CHAT_ID = "6724973499"
+# ========= ENV =========
+CMC_API_KEY = os.getenv("CMC_API_KEY")
+BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
 
-# ==========================
+# ======================
 
 COINS = [
     "BTC","ETH","USDT","SOL","BNB","XRP","DOGE","USDC","TRX","SHIB",
@@ -28,7 +29,7 @@ def get_market(symbols):
 
     try:
         res = requests.get(url, headers=headers, params=params).json()
-        return res["data"]
+        return res.get("data", {})
     except:
         return {}
 
@@ -116,7 +117,7 @@ def post_binance(content):
     except:
         return "Post failed"
 
-# 🔹 Telegram Notify
+# 🔹 Telegram
 def send(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
@@ -124,7 +125,7 @@ def send(msg):
     except:
         pass
 
-# 🔹 AUTO SHORT (हर 1 घंटे)
+# 🔹 Auto Short
 def auto_short():
     while True:
         try:
@@ -136,7 +137,7 @@ def auto_short():
 
         time.sleep(3600)
 
-# 🔹 AUTO PRO (12 घंटे)
+# 🔹 Auto Pro
 def auto_pro():
     while True:
         try:
@@ -151,3 +152,6 @@ def auto_pro():
 # ===== RUN =====
 threading.Thread(target=auto_short).start()
 threading.Thread(target=auto_pro).start()
+
+while True:
+    time.sleep(100)
