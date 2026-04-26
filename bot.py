@@ -4,12 +4,21 @@ import threading
 import random
 import os
 from datetime import datetime
+from flask import Flask
 
 # ========= ENV =========
 CMC_API_KEY = os.getenv("CMC_API_KEY")
 BINANCE_API_KEY = os.getenv("BINANCE_API_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
+
+PORT = int(os.environ.get("PORT", 10000))
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot is running ✅"
 
 # ======================
 
@@ -21,23 +30,18 @@ COINS = [
 
 HASHTAGS = {c: f"#{c}" for c in COINS}
 
-# 🔹 Market Data
 def get_market(symbols):
     url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
     headers = {"X-CMC_PRO_API_KEY": CMC_API_KEY}
     params = {"symbol": ",".join(symbols)}
-
     try:
-        res = requests.get(url, headers=headers, params=params).json()
-        return res.get("data", {})
+        return requests.get(url, headers=headers, params=params).json().get("data", {})
     except:
         return {}
 
-# 🔹 Hashtags
 def get_hashtags(coins):
     return " ".join([HASHTAGS.get(c, f"#{c}") for c in coins])
 
-# 🔹 SHORT POST
 def generate_short():
     selected = random.sample(COINS, 3)
     data = get_market(selected)
@@ -51,11 +55,11 @@ def generate_short():
             trend = "📈" if change > 0 else "📉"
             lines.append(f"{coin}: ${price} ({change}%) {trend}")
         except:
-            continue
+            pass
 
     hashtags = get_hashtags(selected)
 
-    return f"""📊 MARKET SNAPSHOT ({datetime.now().strftime('%H:%M')})
+    return f"""📊 MARKET SNAPSHOT
 
 {chr(10).join(lines)}
 
@@ -64,7 +68,6 @@ def generate_short():
 {hashtags} #crypto
 """
 
-# 🔹 PRO POST
 def generate_pro():
     selected = random.sample(COINS, 2)
     data = get_market(selected)
@@ -73,15 +76,14 @@ def generate_pro():
     for coin in selected:
         try:
             change = data[coin]["quote"]["USD"]["percent_change_24h"]
-
             if change > 3:
-                insights.append(f"{coin} showing strong bullish momentum 🚀")
+                insights.append(f"{coin} bullish 🚀")
             elif change < -3:
-                insights.append(f"{coin} under selling pressure 📉")
+                insights.append(f"{coin} bearish 📉")
             else:
-                insights.append(f"{coin} moving sideways ⚖️")
+                insights.append(f"{coin} sideways ⚖️")
         except:
-            continue
+            pass
 
     hashtags = get_hashtags(selected)
 
@@ -89,69 +91,52 @@ def generate_pro():
 
 {' | '.join(insights)}
 
-📊 Market showing mixed behavior
-
-💡 Insight:
-Breakout or correction possible soon.
-
-⚠️ Trade wisely
+💡 Trade wisely
 
 {hashtags} #crypto
 """
 
-# 🔹 Binance Post
 def post_binance(content):
     url = "https://www.binance.com/bapi/composite/v1/public/pgc/openApi/content/add"
-
     headers = {
         "X-Square-OpenAPI-Key": BINANCE_API_KEY,
         "Content-Type": "application/json",
         "clienttype": "binanceSkill"
     }
-
-    data = {"bodyTextOnly": content}
-
     try:
-        res = requests.post(url, headers=headers, json=data)
+        res = requests.post(url, headers=headers, json={"bodyTextOnly": content})
         return res.json()["data"]["shareLink"]
     except:
         return "Post failed"
 
-# 🔹 Telegram
 def send(msg):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    try:
-        requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
-    except:
-        pass
+    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
-# 🔹 Auto Short
 def auto_short():
     while True:
         try:
             post = generate_short()
             link = post_binance(post)
-            send(f"🤖 AUTO POST\n\n{post}\n\n🔗 {link}")
+            send(f"🤖 AUTO\n\n{post}\n\n🔗 {link}")
         except Exception as e:
-            print("Short Error:", e)
-
+            print(e)
         time.sleep(3600)
 
-# 🔹 Auto Pro
 def auto_pro():
     while True:
         try:
             post = generate_pro()
             link = post_binance(post)
-            send(f"🔥 PRO POST\n\n{post}\n\n🔗 {link}")
+            send(f"🔥 PRO\n\n{post}\n\n🔗 {link}")
         except Exception as e:
-            print("Pro Error:", e)
-
+            print(e)
         time.sleep(43200)
 
-# ===== RUN =====
+# threads start
 threading.Thread(target=auto_short).start()
 threading.Thread(target=auto_pro).start()
 
-while True:
-    time.sleep(100)
+# start web server (IMPORTANT for Render)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=PORT)
